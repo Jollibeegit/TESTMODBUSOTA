@@ -26,8 +26,7 @@ jobs:
         run: |
           mkdir -p $HOME/Arduino/libraries
           git clone https://github.com/4-20ma/ModbusMaster.git $HOME/Arduino/libraries/ModbusMaster
-          git clone https://github.com/andresarmento/modbus-arduino.git $HOME/Arduino/libraries/ModbusRTU
-          mv $HOME/Arduino/libraries/ModbusRTU/src/* $HOME/Arduino/libraries/ModbusRTU/
+          git clone https://github.com/yaacov/ModbusRTU.git $HOME/Arduino/libraries/ModbusRTU
 
       - name: Set version (optional)
         run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
