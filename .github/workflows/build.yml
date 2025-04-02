@@ -1,51 +1,40 @@
-name: 🔧 Build and OTA for ESP32
+name: build
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v3
+    - name: ✅ Checkout code
+      uses: actions/checkout@v3
 
-      - name: 🛠️ Install Arduino CLI
-        run: |
-          curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
-          sudo mv arduino-cli /usr/local/bin
-          arduino-cli config init
-          arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+    - name: 🛠️ Install Arduino CLI
+      run: |
+        curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
+        sudo mv arduino-cli /usr/local/bin
+        arduino-cli config init
+        arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
 
-      - name: 📦 Install ModbusMaster library
-        run: |
-          LIB_PATH="$HOME/Arduino/libraries/ModbusMaster"
-          REPO_URL="https://github.com/4-20ma/ModbusMaster.git"
-          mkdir -p "$HOME/Arduino/libraries"
-          if [ -d "$LIB_PATH" ]; then
-            echo "✅ ModbusMaster 이미 설치됨"
-          else
-            echo "🔍 ModbusMaster 설치 확인 중..."
-            if curl --head --silent --fail "$REPO_URL" > /dev/null; then
-              echo "🌐 Repo 접근 가능. Clone 중..."
-              git clone "$REPO_URL" "$LIB_PATH"
-            else
-              echo "❌ Repo 접근 불가: $REPO_URL"
-              exit 1
-            fi
-          fi
+    - name: 📦 Install ModbusRTU library (modbus-esp8266)
+      run: |
+        arduino-cli lib install "modbus-esp8266"
 
-      - name: 🧪 스케치 빌드
-        run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino
+    - name: 🔍 Show installed libraries
+      run: arduino-cli lib list
 
-      - name: 📤 펌웨어 업로드 (아티팩트)
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware
-          path: ./build/esp32.esp32.esp32/TESTMODBUSOTA.ino.bin
+    - name: 🧪 Compile firmware
+      run: arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino
+
+    - name: 📤 Upload compiled firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: ./build
