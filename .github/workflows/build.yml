@@ -1,4 +1,4 @@
-name: Build ESP32 Firmware
+name: Build and Upload Firmware
 
 on:
   push:
@@ -10,12 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 소스코드 체크아웃
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v3
 
-      # 2. arduino-cli 설치 및 환경 구성
-      - name: Set up Arduino CLI
+      - name: Install Arduino CLI
         run: |
           curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
           sudo mv arduino-cli /usr/local/bin
@@ -24,20 +22,17 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      # 3. 필요한 라이브러리 Git에서 직접 클론
       - name: Clone required libraries
         run: |
           mkdir -p $HOME/Arduino/libraries
           git clone https://github.com/4-20ma/ModbusMaster.git $HOME/Arduino/libraries/ModbusMaster
           git clone https://github.com/andresarmento/modbus-arduino.git $HOME/Arduino/libraries/ModbusRTU
+          mv $HOME/Arduino/libraries/ModbusRTU/src/* $HOME/Arduino/libraries/ModbusRTU/
 
-      # 4. 버전 추출 (선택)
-      - name: Get firmware version
-        id: get_version
-        run: |
-          echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+      - name: Set version (optional)
+        run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+        id: version
 
-      # 5. 빌드 실행
       - name: Compile firmware
         run: |
           mkdir -p build
@@ -47,9 +42,8 @@ jobs:
             --output-dir build \
             .
 
-      # 6. firmware 업로드
-      - name: Upload firmware as artifact
+      - name: Upload firmware binary
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ steps.get_version.outputs.VERSION }}
+          name: firmware
           path: build/*.bin
