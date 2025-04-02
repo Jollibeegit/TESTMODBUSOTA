@@ -1,4 +1,4 @@
-name: Build ESP32 Firmware
+name: Build and Prepare OTA for ESP32
 
 on:
   push:
@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: 📥 저장소 체크아웃
         uses: actions/checkout@v3
 
-      - name: Install Arduino CLI
+      - name: 🛠️ Arduino CLI 설치 및 설정
         run: |
           curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
           sudo mv arduino-cli /usr/local/bin
@@ -22,13 +22,12 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      - name: Ensure Arduino Libraries Directory
-        run: mkdir -p $HOME/Arduino/libraries
-
-      - name: Check & Install ModbusMaster Library
+      - name: 📚 ModbusMaster 라이브러리 설치 확인 및 복제
         run: |
           LIB_PATH="$HOME/Arduino/libraries/ModbusMaster"
           REPO_URL="https://github.com/4-20ma/ModbusMaster.git"
+
+          mkdir -p $HOME/Arduino/libraries
           if [ -d "$LIB_PATH" ]; then
             echo "✅ ModbusMaster 이미 설치됨"
           else
@@ -42,23 +41,12 @@ jobs:
             fi
           fi
 
-      - name: Check & Install ModbusRTU Library
+      - name: 🧪 스케치 빌드
         run: |
-          LIB_PATH="$HOME/Arduino/libraries/ModbusRTU"
-          REPO_URL="https://github.com/yaacov/ModbusRTU.git"
-          if [ -d "$LIB_PATH" ]; then
-            echo "✅ ModbusRTU 이미 설치됨"
-          else
-            echo "🔍 ModbusRTU 설치 확인 중..."
-            if curl --head --silent --fail "$REPO_URL" > /dev/null; then
-              echo "🌐 Repo 접근 가능. Clone 중..."
-              git clone "$REPO_URL" "$LIB_PATH"
-            else
-              echo "❌ Repo 접근 불가: $REPO_URL"
-              exit 1
-            fi
-          fi
+          arduino-cli compile --fqbn esp32:esp32:esp32 main.ino
 
-      - name: Compile Sketch
-        run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 your_sketch_directory
+      - name: 📦 바이너리 업로드 (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: ./build/esp32.esp32.esp32/main.ino.bin
