@@ -1,9 +1,7 @@
-name: build
+name: build-and-release
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
     branches: [ "main" ]
 
 jobs:
@@ -24,17 +22,22 @@ jobs:
         arduino-cli core install esp32:esp32
 
     - name: 📦 Install ModbusRTU library (modbus-esp8266)
-      run: |
-        arduino-cli lib install "modbus-esp8266"
+      run: arduino-cli lib install "modbus-esp8266"
 
     - name: 🔍 Show installed libraries
       run: arduino-cli lib list
 
     - name: 🧪 Compile firmware
-      run: arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
+      run: |
+        mkdir -p ./build
+        arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
 
-    - name: 📤 Upload compiled firmware
-      uses: actions/upload-artifact@v4
+    - name: 🏷️ Create GitHub Release and Upload firmware
+      uses: softprops/action-gh-release@v2
       with:
-        name: firmware
-        path: ./build
+        tag_name: latest
+        name: Latest Firmware Release
+        files: |
+          ./build/TESTMODBUSOTA.ino.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
