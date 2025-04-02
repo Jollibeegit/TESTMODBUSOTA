@@ -1,4 +1,4 @@
-name: Build and Upload Firmware
+name: Build ESP32 Firmware
 
 on:
   push:
@@ -22,27 +22,43 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      - name: Clone required libraries
+      - name: Ensure Arduino Libraries Directory
+        run: mkdir -p $HOME/Arduino/libraries
+
+      - name: Check & Install ModbusMaster Library
         run: |
-          mkdir -p $HOME/Arduino/libraries
-          git clone https://github.com/4-20ma/ModbusMaster.git $HOME/Arduino/libraries/ModbusMaster
-          git clone https://github.com/yaacov/ModbusRTU.git $HOME/Arduino/libraries/ModbusRTU
+          LIB_PATH="$HOME/Arduino/libraries/ModbusMaster"
+          REPO_URL="https://github.com/4-20ma/ModbusMaster.git"
+          if [ -d "$LIB_PATH" ]; then
+            echo "✅ ModbusMaster 이미 설치됨"
+          else
+            echo "🔍 ModbusMaster 설치 확인 중..."
+            if curl --head --silent --fail "$REPO_URL" > /dev/null; then
+              echo "🌐 Repo 접근 가능. Clone 중..."
+              git clone "$REPO_URL" "$LIB_PATH"
+            else
+              echo "❌ Repo 접근 불가: $REPO_URL"
+              exit 1
+            fi
+          fi
 
-      - name: Set version (optional)
-        run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
-        id: version
-
-      - name: Compile firmware
+      - name: Check & Install ModbusRTU Library
         run: |
-          mkdir -p build
-          arduino-cli compile \
-            --fqbn esp32:esp32:esp32 \
-            --libraries $HOME/Arduino/libraries \
-            --output-dir build \
-            .
+          LIB_PATH="$HOME/Arduino/libraries/ModbusRTU"
+          REPO_URL="https://github.com/yaacov/ModbusRTU.git"
+          if [ -d "$LIB_PATH" ]; then
+            echo "✅ ModbusRTU 이미 설치됨"
+          else
+            echo "🔍 ModbusRTU 설치 확인 중..."
+            if curl --head --silent --fail "$REPO_URL" > /dev/null; then
+              echo "🌐 Repo 접근 가능. Clone 중..."
+              git clone "$REPO_URL" "$LIB_PATH"
+            else
+              echo "❌ Repo 접근 불가: $REPO_URL"
+              exit 1
+            fi
+          fi
 
-      - name: Upload firmware binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware
-          path: build/*.bin
+      - name: Compile Sketch
+        run: |
+          arduino-cli compile --fqbn esp32:esp32:esp32 your_sketch_directory
