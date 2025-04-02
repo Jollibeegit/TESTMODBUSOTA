@@ -102,4 +102,5 @@ void performOTA() {
 void loop() {
   mb.task();  // Modbus 처리
   yield();
+  delay(1000);
 }
