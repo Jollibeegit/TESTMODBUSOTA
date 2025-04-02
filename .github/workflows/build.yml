@@ -31,7 +31,7 @@ jobs:
       run: arduino-cli lib list
 
     - name: 🧪 Compile firmware
-      run: arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino
+      run: arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
 
     - name: 📤 Upload compiled firmware
       uses: actions/upload-artifact@v4
