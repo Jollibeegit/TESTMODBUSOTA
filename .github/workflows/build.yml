@@ -1,4 +1,4 @@
-name: Build & Release ESP32 Firmware
+name: Build and Publish Firmware
 
 on:
   push:
@@ -10,38 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Install Arduino CLI
-        run: |
-          curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
-          sudo mv arduino-cli /usr/local/bin
-          arduino-cli config init
-          arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+    - name: Install Arduino CLI
+      run: |
+        curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
+        sudo mv arduino-cli /usr/local/bin
+        arduino-cli config init
+        arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
 
-      - name: Install libraries
-        run: |
-          arduino-cli lib install "modbus-esp8266"
+    - name: Compile sketch
+      run: |
+        mkdir -p ./build
+        arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
 
-      - name: Compile firmware
-        run: |
-          mkdir -p ./build
-          arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
+    - name: Upload to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        name: Latest Firmware
+        files: ./build/TESTMODBUSOTA.ino.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload compiled firmware as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware
-          path: ./build
+    - name: Copy firmware to Pages
+      run: |
+        mkdir -p public
+        cp ./build/TESTMODBUSOTA.ino.bin public/firmware.bin
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest Firmware Release
-          files: ./build/TESTMODBUSOTA.ino.bin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./public
