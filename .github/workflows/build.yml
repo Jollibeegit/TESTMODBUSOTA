@@ -1,4 +1,4 @@
-name: Build & OTA
+name: Build ESP32 Firmware
 
 on:
   push:
@@ -10,35 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: ✅ 저장소 체크아웃
-      uses: actions/checkout@v3
+      # 1. 소스코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: 🔧 arduino-cli 설치 & 보드 설정
-      run: |
-        curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
-        sudo mv arduino-cli /usr/local/bin
-        arduino-cli config init
-        arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-        arduino-cli core update-index
-        arduino-cli core install esp32:esp32
+      # 2. arduino-cli 설치 및 환경 구성
+      - name: Set up Arduino CLI
+        run: |
+          curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
+          sudo mv arduino-cli /usr/local/bin
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
 
-    - name: 📥 라이브러리 직접 git clone 설치
-      run: |
-        mkdir -p ~/Arduino/libraries
-        git clone https://github.com/4-20ma/ModbusMaster.git ~/Arduino/libraries/ModbusMaster
-        git clone https://github.com/andresarmento/modbus-arduino.git ~/Arduino/libraries/ModbusRTU
+      # 3. 필요한 라이브러리 Git에서 직접 클론
+      - name: Clone required libraries
+        run: |
+          mkdir -p $HOME/Arduino/libraries
+          git clone https://github.com/4-20ma/ModbusMaster.git $HOME/Arduino/libraries/ModbusMaster
+          git clone https://github.com/andresarmento/modbus-arduino.git $HOME/Arduino/libraries/ModbusRTU
 
-    - name: 📦 버전 정보 읽기
-      id: version
-      run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+      # 4. 버전 추출 (선택)
+      - name: Get firmware version
+        id: get_version
+        run: |
+          echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
 
-    - name: ⚙️ 컴파일
-      run: |
-        mkdir -p build
-        arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
+      # 5. 빌드 실행
+      - name: Compile firmware
+        run: |
+          mkdir -p build
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --libraries $HOME/Arduino/libraries \
+            --output-dir build \
+            .
 
-    - name: 📤 펌웨어 업로드 (아티팩트로 저장)
-      uses: actions/upload-artifact@v4
-      with:
-        name: firmware-${{ steps.version.outputs.VERSION }}
-        path: build/*.bin
+      # 6. firmware 업로드
+      - name: Upload firmware as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ steps.get_version.outputs.VERSION }}
+          path: build/*.bin
