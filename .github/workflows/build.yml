@@ -1,4 +1,4 @@
-name: Build firmware
+name: Build and Export ESP32 Firmware
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Install Arduino CLI
@@ -22,17 +22,21 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp32:esp32
 
-    - name: Install libraries
+    - name: Install ModbusRTU Library
       run: |
         arduino-cli lib install "ModbusRTU"
 
-    - name: Compile sketch
+    - name: Read version from version.txt
+      id: get_version
+      run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+    - name: Compile Firmware
       run: |
         mkdir -p build
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
 
-    - name: Upload firmware
+    - name: Upload Firmware Binary
       uses: actions/upload-artifact@v4
       with:
-        name: firmware
+        name: firmware-${{ steps.get_version.outputs.VERSION }}
         path: build/*.bin
