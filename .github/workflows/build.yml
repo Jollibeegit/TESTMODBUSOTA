@@ -1,19 +1,20 @@
-name: Build and Export ESP32 Firmware
+name: Build Firmware
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install Arduino CLI
+    - name: Set up Arduino CLI
       run: |
         curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
         sudo mv arduino-cli /usr/local/bin
@@ -22,15 +23,18 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp32:esp32
 
-    - name: Install ModbusRTU Library
+    - name: Install Libraries
       run: |
-        arduino-cli lib install "ModbusRTU"
+        arduino-cli lib install "WiFi"
+        arduino-cli lib install "HTTPClient"
+        arduino-cli lib install "Update"
+        arduino-cli lib install "ModbusMaster"  # ✅ 형이 실제 사용하는 라이브러리
 
-    - name: Read version from version.txt
-      id: get_version
+    - name: Read version from file
+      id: vars
       run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
 
-    - name: Compile Firmware
+    - name: Compile Sketch
       run: |
         mkdir -p build
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
@@ -38,5 +42,5 @@ jobs:
     - name: Upload Firmware Binary
       uses: actions/upload-artifact@v4
       with:
-        name: firmware-${{ steps.get_version.outputs.VERSION }}
+        name: firmware-${{ steps.vars.outputs.VERSION }}
         path: build/*.bin
