@@ -1,4 +1,4 @@
-name: Build and Prepare OTA for ESP32
+name: 🔧 Build and OTA for ESP32
 
 on:
   push:
@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 저장소 체크아웃
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🛠️ Arduino CLI 설치 및 설정
+      - name: 🛠️ Install Arduino CLI
         run: |
           curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
           sudo mv arduino-cli /usr/local/bin
@@ -22,12 +22,11 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      - name: 📚 ModbusMaster 라이브러리 설치 확인 및 복제
+      - name: 📦 Install ModbusMaster library
         run: |
           LIB_PATH="$HOME/Arduino/libraries/ModbusMaster"
           REPO_URL="https://github.com/4-20ma/ModbusMaster.git"
-
-          mkdir -p $HOME/Arduino/libraries
+          mkdir -p "$HOME/Arduino/libraries"
           if [ -d "$LIB_PATH" ]; then
             echo "✅ ModbusMaster 이미 설치됨"
           else
@@ -43,10 +42,10 @@ jobs:
 
       - name: 🧪 스케치 빌드
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 main.ino
+          arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino
 
-      - name: 📦 바이너리 업로드 (artifact)
+      - name: 📤 펌웨어 업로드 (아티팩트)
         uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: ./build/esp32.esp32.esp32/main.ino.bin
+          path: ./build/esp32.esp32.esp32/TESTMODBUSOTA.ino.bin
