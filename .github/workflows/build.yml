@@ -1,20 +1,19 @@
-name: Build Firmware
+name: Build & OTA
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: ✅ 저장소 체크아웃
       uses: actions/checkout@v3
 
-    - name: Set up Arduino CLI
+    - name: 🔧 arduino-cli 설치 & 보드 설정
       run: |
         curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
         sudo mv arduino-cli /usr/local/bin
@@ -23,22 +22,23 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp32:esp32
 
-    - name: Install Libraries
+    - name: 📥 라이브러리 직접 git clone 설치
       run: |
-        arduino-cli lib install "ModbusMaster"  # ✅ 형이 실제 사용하는 라이브러리
-        arduino-cli lib install "ModbusRTU"
+        mkdir -p ~/Arduino/libraries
+        git clone https://github.com/4-20ma/ModbusMaster.git ~/Arduino/libraries/ModbusMaster
+        git clone https://github.com/andresarmento/modbus-arduino.git ~/Arduino/libraries/ModbusRTU
 
-    - name: Read version from file
-      id: vars
+    - name: 📦 버전 정보 읽기
+      id: version
       run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
 
-    - name: Compile Sketch
+    - name: ⚙️ 컴파일
       run: |
         mkdir -p build
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
 
-    - name: Upload Firmware Binary
+    - name: 📤 펌웨어 업로드 (아티팩트로 저장)
       uses: actions/upload-artifact@v4
       with:
-        name: firmware-${{ steps.vars.outputs.VERSION }}
+        name: firmware-${{ steps.version.outputs.VERSION }}
         path: build/*.bin
