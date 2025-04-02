@@ -1,43 +1,47 @@
-name: build-and-release
+name: Build & Release ESP32 Firmware
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: ✅ Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout source code
+        uses: actions/checkout@v3
 
-    - name: 🛠️ Install Arduino CLI
-      run: |
-        curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
-        sudo mv arduino-cli /usr/local/bin
-        arduino-cli config init
-        arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-        arduino-cli core update-index
-        arduino-cli core install esp32:esp32
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_64bit.tar.gz | tar -xz
+          sudo mv arduino-cli /usr/local/bin
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
 
-    - name: 📦 Install ModbusRTU library (modbus-esp8266)
-      run: arduino-cli lib install "modbus-esp8266"
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "modbus-esp8266"
 
-    - name: 🔍 Show installed libraries
-      run: arduino-cli lib list
+      - name: Compile firmware
+        run: |
+          mkdir -p ./build
+          arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
 
-    - name: 🧪 Compile firmware
-      run: |
-        mkdir -p ./build
-        arduino-cli compile --fqbn esp32:esp32:esp32 TESTMODBUSOTA.ino --output-dir ./build
+      - name: Upload compiled firmware as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: ./build
 
-    - name: 🏷️ Create GitHub Release and Upload firmware
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: latest
-        name: Latest Firmware Release
-        files: |
-          ./build/TESTMODBUSOTA.ino.bin
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Firmware Release
+          files: ./build/TESTMODBUSOTA.ino.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
